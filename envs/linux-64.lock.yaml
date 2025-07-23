@@ -5,7 +5,7 @@
 # platform: linux-64
 # input_hash: fd3ab2db8234e4323b979d4ec1db462f976ed44ab8161c5a6d080df300da28f8
 
-name: pypsa-eur
+name: ember-study
 channels:
   - conda-forge
   - bioconda
