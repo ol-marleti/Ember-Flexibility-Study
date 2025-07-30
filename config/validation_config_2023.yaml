@@ -9,11 +9,11 @@ scenario:
   clusters:
   - 39
   opts:
-  - ''
+  - '3H'
   sector_opts:
   - ''
   planning_horizons:
-  - 2025
+  - 2023
 
 
 snapshots:
@@ -44,6 +44,8 @@ atlite:
 lines:
   under_construction: remove
   max_extension: 0
+lines:
+  s_max_pu: 0.5
 
 links:
   under_construction: remove
@@ -52,30 +54,40 @@ links:
 transmission_projects:
   enable: false
 
+pypsa_eur:
+  Generator:
+  - onwind
+  - offwind-ac
+  - offwind-dc
+  - offwind-float
+  - solar-hsat
+  - solar
+  - ror
+
 electricity:
   conventional_generation:
     from_entsoe: true
     year: 2023
   co2limit_enable: true
-  co2limit: 9.0e+8 # 2023 value from https://ember-energy.org/data/electricity-data-explorer/?chart=trend&data=emissions
+  co2limit: 1.35e+9 # 2023 value from https://ember-energy.org/data/electricity-data-explorer/?chart=trend&data=emissions
 
   extendable_carriers:      # forbid new generation & storage
     Generator: []
     StorageUnit: []
     Store: []
   transmission_limit: v1.0  # keep today’s NTCs (default)
-
+  custom_powerplants: true
 
   estimate_renewable_capacities:
     enable: true
-    from_gem: true
+    from_gem: false
     year: 2023
     expansion_limit: false
     technology_mapping:
       Offshore: offwind-ac
       Onshore: onwind
       PV: solar
-      
+       
 load:
   fill_gaps:
     enable: true
@@ -92,17 +104,19 @@ load:
 sector:
   transport: true
   heating: true
-  biomass: false
+  biomass: true
   industry: false
   shipping: false
   aviation: false
   agriculture: false
   conventional_generation:
     OCGT: gas
+    CCGT: gas
     coal: coal
     lignite: lignite
     nuclear: uranium
+    oil: oil
   keep_existing_capacities: true
 
 costs:
-  year: 2025
+  year: 2023
