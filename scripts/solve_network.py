@@ -52,6 +52,10 @@ from scripts._helpers import (
     update_config_from_wildcards,
 )
 
+from scripts.ember_customization import (
+    apply_custom_pf_constraint,
+)
+
 logger = logging.getLogger(__name__)
 
 # Allow for PyPSA versions <0.35
@@ -1194,6 +1198,8 @@ def extra_functionality(
         add_SAFE_constraints(n, config)
     if constraints["CCL"] and n.generators.p_nom_extendable.any():
         add_CCL_constraints(n, config, planning_horizons)
+    if config["ember_settings"].get("ntc_cross_country_pf_restriction", False):
+        apply_custom_pf_constraint(n)
 
     reserve = config["electricity"].get("operational_reserve", {})
     if reserve.get("activate"):
