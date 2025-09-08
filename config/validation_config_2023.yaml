@@ -7,11 +7,11 @@ run:
 
 scenario:
   clusters:
-  - 128
+  - 39
   opts:
   - ''
   sector_opts:
-  - ''
+  - '2190seg'
   planning_horizons:
   - 2025
 
@@ -71,8 +71,8 @@ electricity:
   conventional_generation:
     from_entsoe: false
     year: 2023
-  co2limit_enable: true
-  co2limit: 1.1e+9 # 2023 value from https://ember-energy.org/data/electricity-data-explorer/?chart=trend&data=emissions
+  co2limit_enable: false
+  co2limit: 1.35e+9 # 2023 value from https://ember-energy.org/data/electricity-data-explorer/?chart=trend&data=emissions
 
   extendable_carriers:      # forbid new generation & storage
     Generator: []
@@ -80,8 +80,8 @@ electricity:
     Store: []
   transmission_limit: v1.0  # keep today’s NTCs (default)
 
-  custom_powerplants: DateOut >= 2023
-  powerplants_filter: (Fueltype not in ['Nuclear', 'Hard Coal', 'Lignite'] and DateOut >= 2023)
+  custom_powerplants: (DateIn <= 2023 and DateOut >= 2023)
+  powerplants_filter: (Fueltype not in ['Nuclear', 'Hard Coal', 'Lignite', 'Natural Gas'] and DateIn <= 2023 and DateOut >= 2023)
 
   estimate_renewable_capacities:
     enable: true
@@ -126,10 +126,23 @@ sector:
 
 costs:
   year: 2025
+  fuel:
+    gas: 40.45 # (Avg TTF DA 2023 contracts)
+    coal: 16.71 # (from Avg M1 API2 2023 contracts)
+    lignite: 7.7 #  (from IEEFA paper)
+    oil: 46.8 # (Brent Crude CAL 2023)
+  VOM:
+    OCGT: 2
+    CCGT: 2
+    coal: 7
+    lignite: 7
+  emission_prices:
+    enable: true
+    co2: 85.59
 
 clustering:
   exclude_carriers: [coal, nuclear, lignite]
-#  focus_weights: {'DE': 0.15, 'CZ': 0.15, 'PL': 0.15, 'NL': 0.15, 'IT': 0.15, 'GR': 0.15}
+#  focus_weights: {'DE': 0.2, 'CZ': 0.06, 'PL': 0.1, 'NL': 0.05, 'IT': 0.15, 'GR': 0.05}
 
 simplify_network:
   remove_stubs_across_borders: true
@@ -137,4 +150,6 @@ simplify_network:
 ember_settings:
   ntc: false
   ntc_cross_country_pf_restriction: false
-  ramping: true
+  ramping: false
+  nuclear_decommissioning: true
+  ember_gas_price: true

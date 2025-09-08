@@ -43,9 +43,11 @@ from scripts.build_energy_totals import (
 from scripts.build_transport_demand import transport_degree_factor
 from scripts.definitions.heat_sector import HeatSector
 from scripts.definitions.heat_system import HeatSystem
-from scripts.prepare_network import maybe_adjust_costs_and_potentials
+from scripts.prepare_network import maybe_adjust_costs_and_potentials, add_emission_prices
 
-from scripts.ember_customization import apply_custom_ramping
+from scripts.ember_customization import (
+    apply_custom_ramping, apply_2023_nuclear_decommissioning, apply_hourly_gas_prices
+)
 
 spatial = SimpleNamespace()
 logger = logging.getLogger(__name__)
@@ -570,6 +572,7 @@ def add_carrier_buses(
         nodes = pd.Index(nodes)
 
     n.add("Carrier", carrier)
+    n.carriers.loc[carrier, "co2_emissions"] = costs.loc[carrier, "CO2 intensity"]
 
     unit = "MWh_LHV" if carrier == "gas" else "MWh_th"
 
@@ -1389,7 +1392,6 @@ def add_generation(
             efficiency2=costs.at[carrier, "CO2 intensity"],
             lifetime=costs.at[generator, "lifetime"],
         )
-
 
 def add_ammonia(
     n: pypsa.Network,
@@ -6443,6 +6445,12 @@ if __name__ == "__main__":
 
     if options["allam_cycle_gas"]:
         add_allam_gas(n, costs, pop_layout=pop_layout, spatial=spatial)
+        
+    if snakemake.config["ember_settings"].get("ember_gas_price", False):
+        apply_hourly_gas_prices(
+            n, carriers=["gas", "coal"], fn_hourly_prices=snakemake.input.hourly_fuel_costs
+        )
+        logger.info("Applied hourly gas prices.")
 
     n = set_temporal_aggregation(
         n, snakemake.params.time_resolution, snakemake.input.snapshot_weightings
@@ -6539,5 +6547,20 @@ if __name__ == "__main__":
     if snakemake.config["ember_settings"].get("ramping", False):
         apply_custom_ramping(n)
         logger.info("Ramping constraints applied to relevant units.")
+    if snakemake.config["ember_settings"].get("nuclear_decommissioning", False):
+        logger.warning(
+            "Decommissioning relevant nuclear units mid-year will only work "
+            "if they are represented at a unit granularity."
+        )
+        logger.info("Decommissioning relevant nuclear units mid-year.")
+        apply_2023_nuclear_decommissioning(n, year=n.snapshots.year.unique()[0])
 
+    # Apply emission prices
+    emission_prices = snakemake.config["costs"]["emission_prices"]
+    if emission_prices["enable"]:
+        n.carriers.loc["oil primary", "co2_emissions"] = 0.2571
+        for carrier in n.carriers.index.intersection(costs.index):
+            n.carriers.loc[carrier, "co2_emissions"] = costs.loc[carrier, "CO2 intensity"]
+
+        add_emission_prices(n, emission_prices=emission_prices)
     n.export_to_netcdf(snakemake.output[0])

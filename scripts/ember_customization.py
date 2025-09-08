@@ -1,7 +1,15 @@
+# SPDX-FileCopyrightText: Contributors to PyPSA-Eur <https://github.com/pypsa/pypsa-eur>
+#
+# SPDX-License-Identifier: CC0-1.0
 
 import numpy as np
 import xarray as xr
 import pandas as pd
+import pandas as pd
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def apply_custom_ramping(n):
 
@@ -20,6 +28,72 @@ def apply_custom_ramping(n):
                 param_value /= n.snapshot_weightings.generators.mean()
                 param_value = int(np.ceil(param_value))
             n.links.loc[idx, param] = param_value
+
+
+def apply_2023_nuclear_decommissioning(n, year=2023):
+    if year == 2023:
+        nuclear_info = {
+            "Isar 2": {"coords": [12.29315, 48.60560556], "country": 'DE', "dateout": "2023-04-15"},
+            "Emsland": {"coords": [7.317858333, 52.47423056], "country": 'DE', "dateout": "2023-04-15"},
+            "Neckarwestheim 2": {"coords": [9.175, 49.04111111], "country": 'DE', "dateout": "2023-04-15"},
+        }
+
+    seen_plants = []
+    for plant, info in nuclear_info.items():
+        # network details
+        country = nuclear_info[plant]["country"]
+        country_buses = n.buses.query("country in @country").index
+        network_coords = (
+            n.buses.loc[n.links.query("carrier == 'nuclear' and bus1 in @country_buses").bus1, ["x", "y"]]
+            .set_index(n.links.query("carrier == 'nuclear' and bus1 in @country_buses").index)
+        )
+        network_coords = network_coords.drop(index=seen_plants)
+
+        # plant details
+        dateout = pd.Timestamp(info["dateout"])
+        px, py = info["coords"]
+        dx = network_coords["x"].to_numpy() - px
+        dy = network_coords["y"].to_numpy() - py
+
+        # closest country nuclear plant
+        dist = np.sqrt(dx**2 + dy**2)
+        nearest_gen = network_coords.index[np.argmin(dist)]
+
+        # decommission
+        n.links_t.p_max_pu[nearest_gen] = (
+            n.links.loc[nearest_gen].p_max_pu * ((n.snapshots < dateout).astype(int))
+        )
+
+        seen_plants.append(nearest_gen)
+
+
+def apply_hourly_gas_prices(n, carriers, fn_hourly_prices):
+    df = pd.read_csv(fn_hourly_prices)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df.set_index('timestamp', inplace=True)
+       
+    if not df.index.equals(n.snapshots):
+        logger.warning("Snapshot indices do not match exactly. Overwriting prices index with network snapshots.")
+        df.index = n.snapshots
+    
+    if 'marginal_cost' not in n.generators_t:
+        n.generators_t['marginal_cost'] = pd.DataFrame(index=n.snapshots, columns=[])
+    
+    for carrier in carriers:
+        idx = n.generators.index[n.generators.carrier == carrier]
+        if len(idx) == 0:
+            continue
+        if carrier == 'gas':
+            price_col = 'GAS_SPOT_PRICE_EUR_PER_MWH'
+        elif carrier == 'coal':
+            price_col = 'COAL_SPOT_PRICE_EUR_PER_MWH'
+        else:
+            price_col = 'LIGNITE_PRICE_EUR_PER_MWH'
+        prices = df[price_col]
+        
+        mc_t_array = prices.to_numpy()[:, np.newaxis]
+        mc_t_df = pd.DataFrame(mc_t_array, index=prices.index, columns=idx)
+        n.generators_t['marginal_cost'][idx] = mc_t_df
 
 
 def apply_custom_pf_constraint(n,
