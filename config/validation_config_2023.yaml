@@ -132,10 +132,10 @@ costs:
     lignite: 7.7 #  (from IEEFA paper)
     oil: 46.8 # (Brent Crude CAL 2023)
   VOM:
-    OCGT: 2
-    CCGT: 2
-    coal: 7
-    lignite: 7
+    OCGT: 1
+    CCGT: 1
+    coal: 2.3
+    lignite: 2.3
   emission_prices:
     enable: true
     co2: 85.59
