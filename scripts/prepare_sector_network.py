@@ -1383,7 +1383,7 @@ def add_generation(
             * costs.at[generator, "capital_cost"],  # NB: fixed cost is per MWel
             p_nom_extendable=bool(generator in ext_carriers.get("Generator", [])),
             p_nom=p_nom,
-            p_max_pu=0.7
+            p_max_pu=0.75
             if carrier == "uranium"
             else 1,  # be conservative for nuclear (maintenance or unplanned shut downs)
             p_nom_min=p_nom,
