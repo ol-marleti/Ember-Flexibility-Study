@@ -138,7 +138,7 @@ costs:
     lignite: 2.3
   emission_prices:
     enable: true
-    co2: 85.59
+    co2: 80
 
 clustering:
   exclude_carriers: [coal, nuclear, lignite]
@@ -154,3 +154,11 @@ ember_settings:
   nuclear_decommissioning: true
   ember_gas_price: true
   hourly_carbon_prices: false
+  hourly_price_fix: true # True will remove gas, coal and lignite Stores
+  chp_countries:
+    Poland: PL
+    Czechia: CZ
+    Greece: GR
+    Germany: DE
+    Italy: IT
+    Netherlands: NL

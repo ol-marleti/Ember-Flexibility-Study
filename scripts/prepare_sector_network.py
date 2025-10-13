@@ -47,7 +47,7 @@ from scripts.definitions.heat_system import HeatSystem
 from scripts.prepare_network import maybe_adjust_costs_and_potentials, add_emission_prices
 
 from scripts.ember_customization import (
-    apply_custom_ramping, apply_2023_nuclear_decommissioning, apply_hourly_fuel_prices
+    apply_custom_ramping, apply_2023_nuclear_decommissioning, apply_hourly_fuel_prices, include_coal_chps_for_selected_countries
 )
 
 spatial = SimpleNamespace()
@@ -6586,5 +6586,7 @@ if __name__ == "__main__":
         add_emission_prices(
             n, emission_prices=emission_prices, hourly_emission_prices_fn=hourly_emission_prices_fn
         )
+    country_code_map = snakemake.config['ember_settings'].get('chp_countries', {})
+    include_coal_chps_for_selected_countries(n, costs, CHP_ppl_fn=snakemake.input.chp_data, country_code_map=country_code_map )
 
     n.export_to_netcdf(snakemake.output[0])
